@@ -1,0 +1,27 @@
+li@li-virtual-machine:~/code$ cd testmuduo
+li@li-virtual-machine:~/code/testmuduo$ mkdir build
+li@li-virtual-machine:~/code/testmuduo$ mkdir bin
+li@li-virtual-machine:~/code/testmuduo$ cd build
+li@li-virtual-machine:~/code/testmuduo/build$ cmake..
+cmake..：未找到命令
+li@li-virtual-machine:~/code/testmuduo/build$ cmake ..
+-- The C compiler identification is GNU 7.5.0
+-- The CXX compiler identification is GNU 7.5.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/cc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/li/code/testmuduo/build
+li@li-virtual-machine:~/code/testmuduo/build$ make
+[ 50%] Building CXX object CMakeFiles/server.dir/muduo_server.cpp.o
+[100%] Linking CXX executable ../bin/server
+[100%] Built target server
+li@li-virtual-machine:~/code/testmuduo/build$ 
