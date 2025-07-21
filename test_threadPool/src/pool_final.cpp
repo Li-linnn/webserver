@@ -1,0 +1,162 @@
+#include "pool_final.h"
+#include <functional>
+#include <thread>
+#include <iostream>
+
+constexpr int MAX_QUE_THRESHHLOD = 1024;
+constexpr int MAX_THREAD_THRESHHOLD = 10;
+constexpr int MAX_THREAD_IDEL_TIME = 10;
+
+ThreadPool::ThreadPool()
+    :initThreadNum_(0), 
+    threadThreshHold_(MAX_THREAD_THRESHHOLD),
+    QueThreshHold_(MAX_QUE_THRESHHLOD), 
+    taskNum_(0),
+    poolIsRunning_(false),
+    mode_(PoolMode::MODE_FIXED)
+{}
+ThreadPool::~ThreadPool()
+{
+    std::cout << "pool exit!" << std::endl;
+    poolIsRunning_ = false;
+
+    std::unique_lock<std::mutex> lock(TaskThreadMtx_);
+    notEmpty_.notify_all();
+    exitCond_.wait(lock, [&]()->bool{return threads_.empty();});
+}
+
+// 设置任务队列上限阈值
+void ThreadPool::setQueThreshHold(int threshhold)
+{
+    if(getPoolState())
+    {
+        return;
+    }
+    QueThreshHold_ = threshhold;
+}
+
+// 设置线程池模式
+void ThreadPool::setPoolMode(PoolMode mode)
+{
+    if(getPoolState())
+    {
+        return;
+    }
+    mode_ = mode;
+}
+
+void ThreadPool::setThreadThreshHold(int threshhold)
+{
+    if(getPoolState())
+    {
+        return;
+    }
+    if(mode_ == PoolMode::MODE_CATCHED)
+    {
+        threadThreshHold_ = threshhold;
+    }
+}
+
+bool ThreadPool::getPoolState() const
+{
+    return poolIsRunning_;
+}
+
+// 线程函数
+void ThreadPool::threadFunc(int threadId)
+{
+    while(poolIsRunning_)
+    {
+        Task task;
+        {
+            std::unique_lock<std::mutex> lock(TaskThreadMtx_);
+            std::cout << "thread: " << threadId << " request task" << std::endl;
+            // 死锁：pool析构时有刚进来要获取锁的线程
+            if(!poolIsRunning_ && taskQue_.empty())
+            {
+                break;
+            }
+            // 等待非空条件
+            while(taskQue_.empty())
+            {
+                if(mode_ == PoolMode::MODE_CATCHED)
+                {
+                    if(notEmpty_.wait_for(lock, std::chrono::seconds(20)) == std::cv_status::timeout
+                    && totalThread_ > initThreadNum_)
+                    {
+                        threads_.erase(threadId);
+                        totalThread_--;
+                        std::cout << "thread: " << threadId << " exit!" << std::endl;
+                        return;
+                    }
+                }
+                else
+                {
+                    notEmpty_.wait(lock);
+                }
+                // pool析构时正阻塞在wait的线程，检查是否被 线程池关闭信号唤醒
+                if(!poolIsRunning_ && taskQue_.empty())
+                {
+                    threads_.erase(threadId);
+                    totalThread_--;
+                    std::cout << "thread: " << threadId << " exit!" << std::endl;
+                    exitCond_.notify_all();
+                    return;
+                }
+            }
+            task = taskQue_.front();
+            taskQue_.pop();
+            taskNum_--;
+
+            std::cout << "thread: " << threadId << " acquire task" << std::endl;
+
+            notEmpty_.notify_all();
+            notFull_.notify_all();
+        }
+        // 取完任务及时释放锁
+        if(task != nullptr)
+        {
+            idelThread_--;
+            // return task->run();
+            task();
+        }
+        // pool析构时在执行task的线程，执行完跳出while
+    }
+    {
+        std::unique_lock<std::mutex> lock(TaskThreadMtx_);
+        threads_.erase(threadId);
+        totalThread_--;
+        std::cout << "thread: " << threadId << " exit!" << std::endl;
+        exitCond_.notify_all();
+    }
+}
+
+// 启动线程池
+void ThreadPool::startPool(int initNum)
+{
+    initThreadNum_ = initNum;
+    poolIsRunning_ = true;
+
+    for(int i = 0; i < initThreadNum_; i++)
+    {
+        auto thread_ptr = std::make_unique<Thread>(std::bind(&ThreadPool::threadFunc, this, std::placeholders::_1));
+        threads_.emplace(thread_ptr->getThreadId(), std::move(thread_ptr));
+        totalThread_++;
+       // threads_.emplace_back(new Thread(std::bind(&ThreadPool::threadFunc, this)));
+    }
+
+    for(auto& thread_ : threads_)
+    {
+        thread_.second->startThread();
+        std::cout << "create thread: " << thread_.second->getThreadId() << std::endl;
+        idelThread_++;
+    }
+}
+
+ThreadPool* ThreadPool::getThreadPool()
+{
+    static ThreadPool pool;
+    return &pool;
+}
+
+// Result ThreadPool::submit(std::function<Any()>)
