@@ -1,1 +1,0 @@
-/usr/bin/c++  -g CMakeFiles/thread_pool.dir/pool_final.cpp.o CMakeFiles/thread_pool.dir/thread.cpp.o CMakeFiles/thread_pool.dir/main.cpp.o -o ../../bin/thread_pool  -lpthread 

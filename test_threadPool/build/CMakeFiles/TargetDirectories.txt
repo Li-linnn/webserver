@@ -1,5 +1,0 @@
-/home/li/webserver/webserver/test_threadPool/build/CMakeFiles/edit_cache.dir
-/home/li/webserver/webserver/test_threadPool/build/CMakeFiles/rebuild_cache.dir
-/home/li/webserver/webserver/test_threadPool/build/src/CMakeFiles/thread_pool.dir
-/home/li/webserver/webserver/test_threadPool/build/src/CMakeFiles/edit_cache.dir
-/home/li/webserver/webserver/test_threadPool/build/src/CMakeFiles/rebuild_cache.dir
